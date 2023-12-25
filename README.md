@@ -1,67 +1,92 @@
-![tun2socks](docs/wordmark.png)
+# Tun2socks Guide - Using a Socks5 Proxy with Wintun Device on Windows
 
-[![GitHub Workflow][1]](https://github.com/xjasonlyu/tun2socks/actions)
-[![Go Version][2]](https://github.com/xjasonlyu/tun2socks/blob/main/go.mod)
-[![Go Report][3]](https://goreportcard.com/badge/github.com/xjasonlyu/tun2socks)
-[![Maintainability][4]](https://codeclimate.com/github/xjasonlyu/tun2socks/maintainability)
-[![GitHub License][5]](https://github.com/xjasonlyu/tun2socks/blob/main/LICENSE)
-[![Docker Pulls][6]](https://hub.docker.com/r/xjasonlyu/tun2socks)
-[![Releases][7]](https://github.com/xjasonlyu/tun2socks/releases)
+This guide provides detailed instructions for configuring a Socks5 proxy with a wintun device on Windows systems. Follow the steps below to set up your Socks5 proxy connection.
 
-[1]: https://img.shields.io/github/actions/workflow/status/xjasonlyu/tun2socks/release.yml?logo=github
-[2]: https://img.shields.io/github/go-mod/go-version/xjasonlyu/tun2socks?logo=go
-[3]: https://goreportcard.com/badge/github.com/xjasonlyu/tun2socks
-[4]: https://api.codeclimate.com/v1/badges/b5b30239174fc6603aca/maintainability
-[5]: https://img.shields.io/github/license/xjasonlyu/tun2socks
-[6]: https://img.shields.io/docker/pulls/xjasonlyu/tun2socks?logo=docker
-[7]: https://img.shields.io/github/v/release/xjasonlyu/tun2socks?logo=smartthings
+## Prerequisites
 
-English | [简体中文](README_ZH.md)
+- Make sure you have `tun2socks` installed and configured correctly on your system.
+- You will also need details of your Socks5 proxy server (`host` and `port`).
+- Administrative privileges on your system to execute network configuration commands.
 
-## Features
+## Configuration Steps
 
-- Proxy Everything: Handle all network traffic of any internet programs sent by the device through a proxy.
-- Proxy Protocols: HTTP/Socks4/Socks5/Shadowsocks with authentication support for remote connections.
-- Run Everywhere: Linux/macOS/Windows/FreeBSD/OpenBSD multi-platform support with specific optimization.
-- Gateway Mode: Act as a layer three gateway to handle network traffic from other devices in the same network.
-- Full IPv6 Support: All functions work in IPv6, tunnel IPv4 connections through IPv6 proxy and vice versa.
-- Network Stack: Powered by user-space TCP/IP stack from Google container application kernel **[gVisor](https://github.com/google/gvisor)**.
+1. **Set Up the Socks5 Proxy:**
 
-## Benchmarks
+   Configure the tun2socks to use the Socks5 proxy by replacing `host` and `port` with your proxy server's host address and port number.
 
-For all scenarios of usage, tun2socks performs best. See [here](https://github.com/xjasonlyu/tun2socks/wiki/Benchmarks) for more details.
+   ```bash
+   tun2socks -device wintun -proxy socks5://host:port
+   ```
 
-![benchmark](docs/benchmark.png)
+2. **Find the Default Gateway:**
 
-## Documentation
+   Identify the IP address of your default gateway using this command:
 
-- [Install from Source](https://github.com/xjasonlyu/tun2socks/wiki/Install-from-Source)
-- [Quickstart Examples](https://github.com/xjasonlyu/tun2socks/wiki/Examples)
-- [Memory Optimization](https://github.com/xjasonlyu/tun2socks/wiki/Memory-Optimization)
+   ```bash
+   ipconfig | findstr /r /c:"Default Gateway.*:"
+   ```
 
-Full documentation and technical guides can be found at [Wiki](https://github.com/xjasonlyu/tun2socks/wiki).
+3. **Check the Routing Table:**
 
-## Community
+   Ensure that the default gateway is reachable and properly set in your routing table:
 
-Welcome and feel free to ask any questions at [Discussions](https://github.com/xjasonlyu/tun2socks/discussions).
+   ```bash
+   route print -4
+   ```
 
-## Credits
+4. **Configure Wintun Device IP Address and Subnet Mask:**
 
-- [google/gvisor](https://github.com/google/gvisor) - Application Kernel for Containers
-- [wireguard-go](https://git.zx2c4.com/wireguard-go) - Go Implementation of WireGuard
+   Set the IP address and subnet mask of the wintun device. Replace `10.10.10.1` and `255.255.255.0` with your chosen IP and subnet mask.
 
-## License
+   ```bash
+   netsh interface ip set address name=wintun source=static addr=10.10.10.1 mask=255.255.255.0 gateway=none
+   ```
 
-[GPL-3.0](https://github.com/xjasonlyu/tun2socks/blob/main/LICENSE)
+5. **Add DNS to Wintun Device:**
 
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fxjasonlyu%2Ftun2socks.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fxjasonlyu%2Ftun2socks?ref=badge_large)
+   Add a DNS server to your wintun device configuration:
 
-## Star History
+   ```bash
+   netsh interface ip add dns name=wintun addr=1.1.1.1
+   ```
 
-<a href="https://star-history.com/#xjasonlyu/tun2socks&Date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=xjasonlyu/tun2socks&type=Date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=xjasonlyu/tun2socks&type=Date" />
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=xjasonlyu/tun2socks&type=Date" />
-  </picture>
-</a>
+6. **Disable IPv6 Forwarding:**
+
+   For security, disable IPv6 forwarding on the wintun device:
+
+   ```bash
+   netsh interface ipv6 set interface wintun forwarding=disabled
+   ```
+
+7. **Set Default Route for Wintun Device:**
+
+   Configure the default route for all traffic to go through the wintun device:
+
+   ```bash
+   route add 0.0.0.0 mask 0.0.0.0 10.10.10.1 metric 5
+   ```
+
+8. **Add Route to Specific Server IP:**
+
+   If needed, add a route to ensure traffic for a specific server IP goes through the correct gateway. Replace `[server ip]` and `[Default Gateway]` with the actual IPs.
+
+   ```bash
+   route add [server ip] mask 255.255.255.255 [Default Gateway] metric 5
+   ```
+
+## Notes
+
+- Replace placeholders (e.g., `[server ip]`, `host`, `port`, `10.10.10.1`) with actual values before running the commands.
+- The steps involve making significant changes to your network configuration. Ensure you understand each step and its consequences.
+- These instructions are for the Windows command-line interface and assume you are running the commands with administrative privileges.
+
+## Troubleshooting
+
+If you encounter any issues, ensure that:
+
+- The `host` and `port` details are correct for your Socks5 proxy server.
+- There are no typos in the commands you have entered.
+- You have the necessary privileges to alter your network settings.
+- Your firewall or antivirus software is not blocking `tun2socks` connections.
+
+For detailed `tun2socks` documentation, refer to the [official tun2socks repository](#).
